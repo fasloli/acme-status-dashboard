@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Nunito', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #ffb3d9, #ff80bf, #ff99cc, #ffb3e6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .floating {
+            position: fixed;
+            animation: floatUp linear infinite;
+            pointer-events: none;
+            user-select: none;
+            z-index: 0;
+        }
+        @keyframes floatUp {
+            0%   { transform: translateY(110vh); opacity: 0.8; }
+            100% { transform: translateY(-10vh); opacity: 0.2; }
+        }
+        .card {
+            background: rgba(255,255,255,0.65);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 50px 60px;
+            max-width: 580px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 8px 40px rgba(255,105,180,0.3);
+            border: 3px solid rgba(255,255,255,0.8);
+            position: relative;
+            z-index: 10;
+        }
+        .mascots {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            display: block;
+            animation: bounce 2s ease-in-out infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50%       { transform: translateY(-10px); }
+        }
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 900;
+            color: #cc0066;
+            text-shadow: 2px 2px 0 #ffb3d9;
+            margin-bottom: 10px;
+            white-space: nowrap;
+        }
+        .subtitle {
+            color: #e6006e;
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+        }
+        #btn {
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            color: white;
+            border: none;
+            padding: 14px 36px;
+            font-size: 1.1rem;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(255,20,147,0.4);
+            transition: transform 0.15s, opacity 0.15s;
+            margin-bottom: 24px;
+        }
+        #btn:not([disabled]):hover { transform: scale(1.05); }
+        #btn:not([disabled]):active { transform: scale(0.97); }
+        #btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+        #status-emoji { font-size: 2.5rem; margin-bottom: 10px; display: none; }
+        #result {
+            border-radius: 16px;
+            padding: 16px 20px;
+            font-size: 0.95rem;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            white-space: pre-wrap;
+            display: none;
+        }
+        #result.success {
+            display: block;
+            background: rgba(255,255,255,0.85);
+            border: 3px solid #ff69b4;
+            color: #cc0066;
+            text-align: left;
+        }
+        #result.error {
+            display: block;
+            background: rgba(100,0,50,0.07);
+            border: 3px solid #cc0066;
+            color: #800040;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <span class="mascots">&#x1F984;&#x1F438;&#x1F308;</span>
+    <h1>&#x2728; Status Dashboard &#x2728;</h1>
+    <p class="subtitle">Welcome to Acme Internal Tools &mdash; the cutest dashboard in the world &#x1F338;</p>
+    <button id="btn" type="button">&#x1F50D; Check Status</button>
+    <div id="status-emoji"></div>
+    <pre id="result"></pre>
+</div>
+<script>
+    var deco = ['&#x1F308;','&#x2B50;','&#x1F984;','&#x1F438;','&#x1F496;','&#x1F338;','&#x2728;','&#x1F36D;','&#x1F98B;','&#x1F31F;'];
+    for (var i = 0; i < 16; i++) {
+        var el = document.createElement('div');
+        el.className = 'floating';
+        el.innerHTML = deco[Math.floor(Math.random() * deco.length)];
+        el.style.left = (Math.random() * 100) + 'vw';
+        el.style.fontSize = (1.5 + Math.random() * 2) + 'rem';
+        el.style.animationDuration = (7 + Math.random() * 10) + 's';
+        el.style.animationDelay = (Math.random() * 8) + 's';
+        document.body.appendChild(el);
+    }
+
+    var confettiLoaded = false;
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js';
+    s.onload = function() { confettiLoaded = true; };
+    document.head.appendChild(s);
+
+    document.getElementById('btn').addEventListener('click', function() {
+        var btn    = document.getElementById('btn');
+        var result = document.getElementById('result');
+        var emoji  = document.getElementById('status-emoji');
+
+        btn.setAttribute('disabled', 'disabled');
+        btn.innerHTML = '&#x23F3; Checking...';
+        result.className = '';
+        result.style.display = '';
+        emoji.style.display  = 'none';
+
+        var controller = new AbortController();
+        var timeout = setTimeout(function() { controller.abort(); }, 5000);
+
+        fetch('/api/v1/status', { signal: controller.signal })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                clearTimeout(timeout);
+                emoji.style.display = 'block';
+                if (data.status === 'ok') {
+                    emoji.innerHTML = '&#x1F389;&#x1F984;&#x1F38A;';
+                    result.className = 'success';
+                    result.textContent = JSON.stringify(data, null, 2);
+                    if (confettiLoaded && typeof confetti === 'function') {
+                        confetti({ particleCount: 200, spread: 80, colors: ['#ff69b4','#ff1493','#ffb3e6','#fff','#ffdd00'] });
+                        setTimeout(function(){ confetti({ particleCount: 100, angle: 60,  spread: 55, origin: { x: 0 } }); }, 300);
+                        setTimeout(function(){ confetti({ particleCount: 100, angle: 120, spread: 55, origin: { x: 1 } }); }, 500);
+                    }
+                } else {
+                    emoji.innerHTML = '&#x1F622;&#x1F494;';
+                    result.className = 'error';
+                    result.textContent = 'Something went wrong!\n\n' + JSON.stringify(data, null, 2);
+                }
+            })
+            .catch(function(err) {
+                clearTimeout(timeout);
+                emoji.style.display = 'block';
+                emoji.innerHTML = '&#x1F62D;&#x1F438;&#x1F494;';
+                result.className = 'error';
+                result.textContent = 'Could not reach the server!\n\n' + String(err);
+            })
+            .finally(function() {
+                btn.removeAttribute('disabled');
+                btn.innerHTML = '&#x1F504; Re-check Status';
+            });
+    });
+</script>
+</body>
+</html>
