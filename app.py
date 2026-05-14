@@ -27,6 +27,7 @@ def api_v1_status():
     })
 
 
+@app.route("/api/secret")
 @app.route("/api/v1/secret")
 def api_v1_secret():
     key = request.headers.get("X-API-Key")
